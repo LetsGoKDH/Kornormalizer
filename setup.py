@@ -13,6 +13,6 @@ setup(
         "dev": ["pytest", "pytest-cov"],
     },
     package_data={
-        "normalizer": ["resources/lexicon/*.txt"],
+        "": ["lexicon/*.txt"],
     },
 )
