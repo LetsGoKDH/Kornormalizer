@@ -7,8 +7,9 @@ from .num2kor import NumberToKorean
 from .alpha2kor import AlphabetToKorean
 from .legal import LegalTerms, LegalSpanDetector
 from .normalizer import KoreanNormalizer, normalize
+from .spacing import apply_dependent_noun_spacing
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
     "Lexicon",
     "CompoundNounSplitter",
@@ -18,4 +19,5 @@ __all__ = [
     "LegalSpanDetector",
     "KoreanNormalizer",
     "normalize",
+    "apply_dependent_noun_spacing",
 ]

@@ -18,6 +18,7 @@ from .splitter import CompoundNounSplitter
 from .num2kor import NumberToKorean
 from .alpha2kor import AlphabetToKorean
 from .legal import LegalSpanDetector
+from .spacing import apply_dependent_noun_spacing
 
 
 def _tokenize_with_punct(text: str) -> List[Tuple[str, str]]:
@@ -157,16 +158,20 @@ class KoreanNormalizer:
     def _normalize_spacing(self, text: str) -> str:
         """
         띄어쓰기 정규화
-        
+
+        - 의존명사 띄어쓰기 (할수있다 → 할 수 있다)
         - 연속 공백 제거
         - 문장부호 앞뒤 공백 정리
         """
+        # 의존명사 띄어쓰기
+        text = apply_dependent_noun_spacing(text)
+
         # 연속 공백을 하나로
         text = re.sub(r'\s+', ' ', text)
-        
+
         # 앞뒤 공백 제거
         text = text.strip()
-        
+
         return text
 
 
