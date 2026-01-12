@@ -31,9 +31,9 @@ def main():
 
     print("\n정규화 결과:")
     for text in test_cases:
-        result = normalize(text, lexicon=lexicon)
+        result = normalize(text, lexicon)
         print(f"  {text}")
-        print(f"  → {result}")
+        print(f"  -> {result}")
         print()
 
 

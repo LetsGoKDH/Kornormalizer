@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-
-"""Korean Text Normalizer with Compound Noun Splitting"""
+"""
+Korean Text Normalizer
+
+한국어 텍스트 정규화 패키지 (TTS 전처리용)
+- 숫자 -> 한글 (2024 -> 이천 이십사)
+- 영문 -> 한글 (KDH -> 케이 디 에이치)
+- 복합명사 분리 (데이터베이스시스템 -> 데이터베이스 시스템)
+- 의존명사 띄어쓰기 (할수있다 -> 할 수 있다)
+"""
 
 from .lexicon import Lexicon
-from .splitter import CompoundNounSplitter
-from .num2kor import NumberToKorean
-from .alpha2kor import AlphabetToKorean
-from .legal import LegalTerms, LegalSpanDetector
-from .normalizer import KoreanNormalizer, normalize
-from .spacing import apply_dependent_noun_spacing
+from .transforms import (
+    normalize,
+    convert_numbers,
+    convert_alphabet,
+    split_compounds,
+    apply_spacing,
+)
 
-__version__ = "0.3.0"
+__version__ = "1.0.0"
 __all__ = [
     "Lexicon",
-    "CompoundNounSplitter",
-    "NumberToKorean",
-    "AlphabetToKorean",
-    "LegalTerms",
-    "LegalSpanDetector",
-    "KoreanNormalizer",
     "normalize",
-    "apply_dependent_noun_spacing",
+    "convert_numbers",
+    "convert_alphabet",
+    "split_compounds",
+    "apply_spacing",
 ]
