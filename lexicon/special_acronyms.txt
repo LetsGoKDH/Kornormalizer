@@ -1,0 +1,28 @@
+# 특수 약어 매핑 (단어화된 두문자어)
+# 형식: 약어=한글발음
+# 철자읽기가 아닌 고정 발음으로 굳어진 것들만
+
+# 질병/보건
+COVID=코로나
+MERS=메르스
+SARS=사스
+AIDS=에이즈
+
+# 국제기구
+NATO=나토
+NASA=나사
+UNESCO=유네스코
+UNICEF=유니세프
+OPEC=오펙
+ASEAN=아세안
+APEC=에이펙
+ASEM=아셈
+
+# 스포츠
+FIFA=피파
+UEFA=유에파
+
+# 경제/금융
+KOSPI=코스피
+KOSDAQ=코스닥
+NASDAQ=나스닥

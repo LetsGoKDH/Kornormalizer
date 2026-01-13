@@ -8,6 +8,7 @@ TTS(음성 합성)를 위한 한국어 텍스트 정규화 라이브러리
 |------|------|------|
 | 숫자 변환 | `2024년` | `이천 이십 사 년` |
 | 알파벳 변환 | `R&D` | `알 앤 디` |
+| 특수 약어 치환 | `COVID-19` | `코로나 십 구` |
 | 복합명사 분리 | `데이터베이스시스템` | `데이터베이스 시스템` |
 | 의존명사 띄어쓰기 | `할수있다` | `할 수 있다` |
 
@@ -114,7 +115,8 @@ Kornormalizer/
 │   ├── end_mono_nouns.txt
 │   ├── head_nouns.txt
 │   ├── legal_terms_strict.txt
-│   └── nosplit.txt
+│   ├── nosplit.txt
+│   └── special_acronyms.txt
 ├── tests/               # 테스트
 ├── example.py           # 사용 예제
 ├── setup.py
@@ -130,6 +132,7 @@ Kornormalizer/
 | `head_nouns.txt` | 15 | 핵심 명사 (나무, 베이스 등) |
 | `legal_terms_strict.txt` | 108,115 | 법률 용어 (분해 금지) |
 | `nosplit.txt` | - | 분해 금지 목록 |
+| `special_acronyms.txt` | 17 | 특수 약어 매핑 (COVID=코로나 등) |
 
 ## 데이터 출처
 
@@ -150,6 +153,8 @@ pytest tests/ -v
 
 ```
 입력 텍스트
+    ↓
+특수 약어 치환 (COVID -> 코로나, NATO -> 나토)
     ↓
 알파벳 변환 (KDH -> 케이 디 에이치)
     ↓

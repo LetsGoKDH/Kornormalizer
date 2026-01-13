@@ -2,9 +2,9 @@
 """Lexicon loader for Korean noun dictionary"""
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Set
+from typing import Set, Dict
 
 
 def _load_set(path: Path) -> Set[str]:
@@ -20,6 +20,21 @@ def _load_set(path: Path) -> Set[str]:
     return items
 
 
+def _load_dict(path: Path) -> Dict[str, str]:
+    """Load key=value mapping from file"""
+    if not path.exists():
+        return {}
+    items: Dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, val = line.split("=", 1)
+            items[key.strip().upper()] = val.strip()
+    return items
+
+
 @dataclass(frozen=True)
 class Lexicon:
     """
@@ -31,13 +46,15 @@ class Lexicon:
         nosplit: 분해 금지 목록
         legal_terms: 법률 용어 (분해 금지, 선택적)
         head_nouns: Head noun 목록 (나무, 꽃, 숲 등 - 끝 위치 선호)
+        special_acronyms: 특수 약어 매핑 (COVID=코로나 등)
     """
 
     nouns: Set[str]
     end_mono_nouns: Set[str]
     nosplit: Set[str]
-    legal_terms: Set[str] = None  # Optional
-    head_nouns: Set[str] = None  # Optional
+    legal_terms: Set[str] = None
+    head_nouns: Set[str] = None
+    special_acronyms: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_dir(cls, lexicon_dir: str | Path) -> "Lexicon":
@@ -55,6 +72,7 @@ class Lexicon:
             - end_mono_nouns.txt: 끝 1음절 허용 명사
             - nosplit.txt: 분해 금지 목록 (선택)
             - legal_terms_strict.txt: 법률 용어 (선택)
+            - special_acronyms.txt: 특수 약어 매핑 (선택)
         """
         d = Path(lexicon_dir)
         return cls(
@@ -63,6 +81,7 @@ class Lexicon:
             nosplit=_load_set(d / "nosplit.txt") if (d / "nosplit.txt").exists() else set(),
             legal_terms=_load_set(d / "legal_terms_strict.txt") if (d / "legal_terms_strict.txt").exists() else set(),
             head_nouns=_load_set(d / "head_nouns.txt") if (d / "head_nouns.txt").exists() else set(),
+            special_acronyms=_load_dict(d / "special_acronyms.txt"),
         )
 
     def is_noun(self, s: str) -> bool:

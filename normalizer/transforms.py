@@ -174,26 +174,56 @@ _ALPHABET_PRON = {
     '&': '앤',
 }
 
+# 특수 약어 (단어화된 두문자어) - 철자읽기 대신 고정 발음
+_SPECIAL_ACRONYMS = {}
 
-def convert_alphabet(text: str) -> str:
+
+def load_special_acronyms(path: str) -> None:
+    """특수 약어 매핑 파일 로드"""
+    from pathlib import Path
+    p = Path(path)
+    if not p.exists():
+        return
+    for line in p.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if '=' in line:
+            key, val = line.split('=', 1)
+            _SPECIAL_ACRONYMS[key.strip().upper()] = val.strip()
+
+
+def convert_alphabet(text: str, special_acronyms: dict = None) -> str:
     """
     영문 약어를 한글 발음으로 변환
 
+    1. 특수 약어 먼저 치환 (COVID -> 코로나)
+    2. 나머지는 철자읽기 (KDH -> 케이 디 에이치)
+
     Examples:
+        "COVID 확진자" -> "코로나 확진자"
+        "NATO 회의" -> "나토 회의"
         "KDH 프로젝트" -> "케이 디 에이치 프로젝트"
-        "R&D" -> "알 앤 디"
-        "C++" -> "씨 플러스 플러스"
     """
-    # 특수 기호 변환
+    acronyms = special_acronyms if special_acronyms else _SPECIAL_ACRONYMS
+
+    # 1. 특수 약어 치환 (대소문자 무시)
+    if acronyms:
+        # 긴 것부터 매칭 (COVID-19가 COVID보다 먼저)
+        for key in sorted(acronyms.keys(), key=len, reverse=True):
+            pattern = re.compile(re.escape(key), re.IGNORECASE)
+            text = pattern.sub(acronyms[key] + ' ', text)
+
+    # 2. 특수 기호 변환
     text = re.sub(r'%p\b', ' 퍼센트 포인트', text)
     text = re.sub(r'%', ' 퍼센트', text)
     text = re.sub(r'\+', ' 플러스', text)
 
+    # 3. 나머지 알파벳 철자읽기
     def replace_acronym(m):
         result_parts = [_ALPHABET_PRON[c.upper()] for c in m.group(0) if c.upper() in _ALPHABET_PRON]
         return " ".join(result_parts) + " "
 
-    # 연속 대문자 또는 [대문자-구두점-대문자] 패턴
     return re.sub(r'[A-Z]{2,}|[A-Z](?:[&/\-][A-Z])+|[A-Za-z]', replace_acronym, text)
 
 
@@ -440,7 +470,7 @@ def normalize(
 
     Args:
         text: 입력 텍스트
-        lexicon: 사전 (복합명사 분리에 필요)
+        lexicon: 사전 (복합명사 분리 + 특수 약어에 필요)
         numbers: 숫자 변환 활성화
         alphabet: 알파벳 변환 활성화
         compounds: 복합명사 분리 활성화
@@ -450,11 +480,12 @@ def normalize(
         정규화된 텍스트
 
     Examples:
-        >>> normalize("2024년 R&D 예산")
-        "이천 이십사 년 알 앤 디 예산"
+        >>> normalize("COVID 확진자 2024년", lexicon)
+        "코로나 확진자 이천 이십사 년"
     """
     if alphabet:
-        text = convert_alphabet(text)
+        acronyms = lexicon.special_acronyms if lexicon else None
+        text = convert_alphabet(text, acronyms)
 
     if numbers:
         text = convert_numbers(text)
