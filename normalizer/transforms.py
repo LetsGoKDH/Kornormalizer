@@ -315,7 +315,7 @@ def _should_split(text: str, lexicon: Lexicon, min_length: int) -> bool:
 
 def _generate_candidates(text: str, lexicon: Lexicon) -> List[tuple]:
     """분해 후보 생성 (재귀)"""
-    candidates = [([text], 0.0)]  # baseline
+    candidates = [([text], _score_candidate([text], lexicon))]  # baseline도 점수 계산
 
     def recurse(remaining: str, tokens: List[str]):
         if not remaining:
@@ -358,9 +358,9 @@ def _score_candidate(tokens: List[str], lexicon: Lexicon) -> float:
     if not tokens:
         return 0.0
 
-    score = -len(tokens) * 1.0  # 토큰 개수 페널티
+    score = -len(tokens) * 0.5  # 토큰 개수 페널티
     avg_len = sum(len(t) for t in tokens) / len(tokens)
-    score += avg_len * 2.0  # 평균 길이 보너스
+    score += avg_len * 0.3  # 평균 길이 보너스
 
     # 1음절 페널티
     for i, t in enumerate(tokens):
@@ -381,12 +381,31 @@ def _score_candidate(tokens: List[str], lexicon: Lexicon) -> float:
         return lexicon.is_end_mono_allowed(t)
 
     if all(is_valid_in_dict(t) for t in tokens):
-        score += 2.0
+        score += 3.0
 
-    # Legal term 보너스
+    # 긴 사전 단어 보너스 (긴 토큰 비선형 선호)
+    def is_valid_compound(token):
+        """사전 명사 또는 head noun 패턴인지 확인"""
+        if lexicon.is_noun(token):
+            return True
+        for suffix_len in [1, 2]:
+            if len(token) > suffix_len:
+                suffix, prefix = token[-suffix_len:], token[:-suffix_len]
+                if lexicon.is_head_noun(suffix) and lexicon.is_noun(prefix):
+                    return True
+        return False
+
+    for token in tokens:
+        if len(token) >= 3 and is_valid_compound(token):
+            # 길이가 길수록 더 큰 보너스 (4글자 이상부터 추가 보너스)
+            score += len(token) * 0.3
+            if len(token) >= 4:
+                score += (len(token) - 3) * 0.5
+
+    # Legal term 보너스 (축소)
     for token in tokens:
         if lexicon.is_legal_term(token):
-            score += 3.0
+            score += 1.0
 
     # Head noun 위치 점수
     for i, token in enumerate(tokens):
@@ -413,19 +432,23 @@ _DEPENDENT_NOUNS = {
     '데': lambda c: has_jongseong_n(c) or has_jongseong_l(c) or c == '는',
 }
 
-_PARTICLES = [
+# 조사 (의존명사 뒤에 붙음, 띄어쓰기 X)
+_NOUN_PARTICLES = [
     '은', '는', '이', '가', '을', '를', '도', '만', '조차', '마저', '까지',
     '처럼', '같이', '보다', '에', '에서', '로', '으로', '와', '과', '랑',
     '밖에', '뿐이다', '인데', '록',
     '이다', '이라', '이고', '이며', '이니', '이면', '이야', '이지', '인', '일', '임',
-    '있다', '있는', '있을', '있으면', '있으니', '있어', '있고', '있지', '있나',
-    '없다', '없는', '없을', '없으면', '없으니', '없어', '없고', '없지', '없나',
+]
+
+# 동사/형용사형 (의존명사 뒤에 띄어쓰기 O)
+_VERB_PARTICLES = [
+    '있다', '있는', '있을', '있으면', '있다면', '있으니', '있어', '있고', '있지', '있나',
+    '없다', '없는', '없을', '없으면', '없다면', '없으니', '없어', '없고', '없지', '없나',
     '알다', '알았다', '알고', '알면', '아는', '알아',
     '모르다', '몰랐다', '모르고', '모르면', '모르는', '몰라',
     '됐다', '되다', '되면', '되고', '되는', '돼',
     '하다', '한다', '해서', '하고', '하면', '해',
     '싶다', '싶어', '싶은', '싶으면',
-    '오래', '얼마', '한참', '꽤', '벌써', '이미', '아직',
 ]
 
 
@@ -439,9 +462,15 @@ def apply_spacing(text: str) -> str:
     """
     # 의존명사 띄어쓰기
     for dep_noun, check_func in _DEPENDENT_NOUNS.items():
-        for particle in _PARTICLES:
+        # 동사형: 의존명사 앞뒤로 띄어쓰기 (할 수 있다)
+        for particle in _VERB_PARTICLES:
+            pattern = f'([가-힣])({dep_noun})({particle})'
+            text = _apply_dep_spacing_with_particle(text, pattern, check_func)
+        # 조사: 의존명사 앞에만 띄어쓰기 (같은 것이)
+        for particle in _NOUN_PARTICLES:
             pattern = f'([가-힣])({dep_noun}{particle})'
             text = _apply_dep_spacing(text, pattern, check_func)
+        # 단독 의존명사
         pattern = f'([가-힣])({dep_noun})(?=\\s|[.,!?]|$)'
         text = _apply_dep_spacing(text, pattern, check_func)
 
@@ -456,6 +485,16 @@ def _apply_dep_spacing(text: str, pattern: str, check_func) -> str:
         prev_char, rest = m.group(1), m.group(2)
         if check_func(prev_char):
             return f'{prev_char} {rest}'
+        return m.group(0)
+    return re.sub(pattern, replacer, text)
+
+
+def _apply_dep_spacing_with_particle(text: str, pattern: str, check_func) -> str:
+    """의존명사 + 후행어미 패턴: 의존명사 앞/뒤 모두 띄어쓰기"""
+    def replacer(m):
+        prev_char, dep_noun, particle = m.group(1), m.group(2), m.group(3)
+        if check_func(prev_char):
+            return f'{prev_char} {dep_noun} {particle}'
         return m.group(0)
     return re.sub(pattern, replacer, text)
 
