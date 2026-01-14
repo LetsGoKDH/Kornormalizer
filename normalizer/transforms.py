@@ -140,6 +140,14 @@ def convert_numbers(text: str) -> str:
     for p in ['-', ',', ';', ':', '/']:
         text = text.replace(p, ' ')
 
+    # 천 단위 (5천원 -> 오천 원)
+    def replace_cheon(m):
+        num, text_unit = int(m.group(1)), m.group(2)
+        result = f"{_number_to_korean(num)}천"
+        return f"{result} {text_unit}" if text_unit else result
+
+    text = re.sub(r"(\d+)천([" + "".join(_TEXT_UNITS) + "]?)", replace_cheon, text)
+
     # 큰 단위 (3만원, 100억)
     def replace_large(m):
         num, unit, text_unit = int(m.group(1)), m.group(2), m.group(3)
